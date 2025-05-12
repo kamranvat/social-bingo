@@ -5,7 +5,7 @@ Socializing tool based off "Kennenlernbingo" as provided by CogSci students from
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/social-bingo.git
+    git clone https://github.com/kamranvat/social-bingo.git
     cd social-bingo
     ```
 
