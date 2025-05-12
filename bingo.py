@@ -1,11 +1,7 @@
-### python script that pulls header, title, entries form a .json file.
-# it then makes bingo sheets: a dict of header: header, title: title, entries: 2d grid of entries
-# it then generates pdf bingo sheets from the dict (N tables per a4 page)
 import json
 import random
 import numpy as np
-from fpdf import FPDF
-import pandas as pd
+from fpdf import FPDF, XPos, YPos
 
 
 def load_json(json_file):
@@ -20,7 +16,7 @@ def create_sheet(data, size=4):
     The data should be a dict with the following keys:
     - title: the title of the bingo sheet
     - header: the header of the bingo sheet
-    - entries: a list of entries to fill the bingo sheet with
+    - statements: a list of statements to fill the bingo sheet with
 
     Args:
         data (dict): dict for the bingo sheet
@@ -30,30 +26,30 @@ def create_sheet(data, size=4):
         dict: A dict with the following keys:
         - title: the title of the bingo sheet
         - header: the header of the bingo sheet
-        - entries: a 2d list of entries to fill the bingo sheet with
+        - statements: a 2d list of statements to fill the bingo sheet with
     """
     title = data["title"]
     header = data["header"]
-    entries = data["entries"]
+    statements = data["statements"]
 
-    # pull entries
+    # pull statements
     amount = size * size
-    if len(entries) < amount:
+    if len(statements) < amount:
         raise ValueError(
-            f"Not enough entries to fill the bingo sheet. Need {amount} but only have {len(entries)}"
+            f"Not enough statements to fill the bingo sheet. Need {amount} but only have {len(statements)}"
         )
-    random.shuffle(entries)
-    entries = entries[:amount]
+    random.shuffle(statements)
+    statements = statements[:amount]
 
     # create bingo sheet
     sheet = []
     for i in range(size):
         row = []
         for j in range(size):
-            row.append(entries[i * size + j])
+            row.append(statements[i * size + j])
         sheet.append(row)
 
-    return {"header": header, "title": title, "entries": sheet}
+    return {"header": header, "title": title, "statements": sheet}
 
 
 def create_sheets(data, size=4, amount=1):
@@ -68,7 +64,7 @@ def create_sheets(data, size=4, amount=1):
         list: A list of dicts with the following keys:
             - title: the title of the bingo sheet
             - header: the header of the bingo sheet
-            - entries: a 2d list of entries to fill the bingo sheet with
+            - statements: a 2d list of statements to fill the bingo sheet with
     """
     sheets = []
     for i in range(amount):
@@ -77,21 +73,33 @@ def create_sheets(data, size=4, amount=1):
 
 
 def check_uniqueness(sheets):
-    """Check if the bingo sheets are unique.
+    """Check if the bingo sheets are unique. Warning: expensive.
 
     Args:
         sheets (list): list of dicts with the following keys:
             - title: the title of the bingo sheet
             - header: the header of the bingo sheet
-            - entries: a 2d list of entries to fill the bingo sheet with
+            - statements: a 2d list of statements to fill the bingo sheet with
 
     Returns:
         bool: True if all sheets are unique, False otherwise
     """
-    entries = []
+    if len(sheets) < 2:
+        return True
+    
+    statements = []
     for sheet in sheets:
-        entries += [entry for row in sheet["entries"] for entry in row]
-    return len(entries) == len(set(entries))
+        # flatten the statements, keeping the order
+        flat_statements = [statement for row in sheet["statements"] for statement in row]
+        statements.append(flat_statements)
+    # check if all statements are unique
+    for i in range(len(statements)):
+        for j in range(i + 1, len(statements)):
+            if statements[i] == statements[j]:
+                print(f"Duplicate sheets found: {i} and {j}")
+                return False
+            
+    return True
 
 
 def create_pdf(sheets, filename="bingo.pdf"):
@@ -101,25 +109,77 @@ def create_pdf(sheets, filename="bingo.pdf"):
         sheets (list): list of dicts with the following keys:
             - title: the title of the bingo sheet
             - header: the header of the bingo sheet
-            - entries: a 2d list of entries to fill the bingo sheet with
+            - statements: a 2d list of statements to fill the bingo sheet with
         filename (str, optional): name of the pdf file. Defaults to "bingo.pdf".
     """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
+    # title, header, and statements size
+    title_font_size = 10
+    header_font_size = 8
+    statement_font_size = 6
+
     # set font
-    pdf.set_font("Arial", size=12)
+    font = "Helvetica"
+
+    # set grid and cell sizes
+    grid_size = np.sqrt(len(sheets[0]["statements"]))
+    grid_size = int(grid_size)
+    cell_width = 95 / grid_size
+    cell_height = 40 / grid_size
+
+    title_height = 0
+    header_height = 0
+    grid_height = grid_size * cell_height + 10
+    print(grid_height)
+    # set margins
+    pdf.set_margins(10, 10, 10)
 
     # loop through sheets
     for i, sheet in enumerate(sheets):
-        # add title
-        pdf.cell(200, 10, txt=sheet["title"], ln=True, align="C")
+        pdf.set_font(font, "B", title_font_size)
+        pdf.cell(200, 10, text=sheet["title"], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+        if i == 0:
+            title_height = pdf.get_y()
+
         # add header
-        pdf.cell(200, 10, txt=sheet["header"], ln=True, align="C")
-        # add entries
-        for row in sheet["entries"]:
-            pdf.cell(200, 10, txt=" | ".join(row), ln=True, align="C")
+        pdf.set_font(font, "I", header_font_size)
+        pdf.multi_cell(200, 10, text=sheet["header"], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", max_line_height=pdf.font_size)
+        if i == 0:
+            header_height = pdf.get_y()
+
+        # create grid
+        pdf.set_font(font, size=statement_font_size)
+        for row in sheet["statements"]:
+            for statement in row:
+                # place text in cell, ensure that if the text is too long, the line breaks
+                pdf.multi_cell(
+                    cell_width,
+                    cell_height,
+                    text=statement,
+                    border=1,
+                    align="C",
+                    max_line_height=pdf.font_size,
+                    #new_x=XPos.RIGHT,
+                    new_y=YPos.TOP,
+                )
+
+            pdf.ln()
+
+        if i == 0:
+            grid_height = pdf.get_y() 
+            print(grid_height)
+
+
+ 
+        #print(title_height, header_height)
+        #pdf.ln(title_height + header_height)
+
+        pdf.set_y(title_height + header_height
+                   + grid_height + 5)
+
         # add page break
         if (i + 1) % 2 == 0:
             pdf.add_page()
@@ -128,14 +188,14 @@ def create_pdf(sheets, filename="bingo.pdf"):
 
 
 def main():
-    # load json file
-    data = load_json("bingo.json")
+    data = load_json("entries.json")
     max_tries = 10  # max tries to generate unique sheets.
+    size = 4  # default size of bingo sheet
+    filename = "sheets.pdf"  # default filename
 
     while True:
-        # get size and amount from user
+        # get amount from user
         try:
-            size = int(input("Enter the size of the bingo sheet (default 4): ") or 4)
             amount = int(
                 input("Enter the number of bingo sheets to create (default 1): ") or 1
             )
@@ -162,7 +222,8 @@ def main():
             return
 
     # create pdf
-    create_pdf(sheets, filename="bingo.pdf")
+    create_pdf(sheets, filename=filename)
+    print(f"Bingo sheets saved to {filename}")
 
 
 if __name__ == "__main__":

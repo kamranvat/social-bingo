@@ -1,6 +1,6 @@
 {
-  "title": "PLACEHOLDER_TITLE",
-  "header": "PLACEHOLDER_HEADER - lorem ipsum dolor sit amet consectetur adipiscing elit",
+  "title": "Social Bingo",
+  "header": "Rules: Get 3 Bingos! Find people who match the statements below. You can only use each person once, and you can only fill statements you didn't know before Ludo. The first person to get 3 Bingos wins! A Bingo is a row, column, or diagonal of 4 statements. Find a person, who ...",
   "statements": [
     "was not born in Germany",
     "has a birthday in October",
@@ -36,7 +36,7 @@
     "has something to eat with them",
     "would like to do a semester abroad",
     "has enrolled in a university sports course",
-    "has helped in the kitchen",
+    "has worked in the kitchen this Ludo",
     "graduated from school this year",
     "took a gap year after school",
     "has the same postal code as you",
