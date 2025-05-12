@@ -17,21 +17,20 @@ def load_json(json_file):
 
 def create_sheet(data, size=4):
     """Create a bingo sheet from the data.
-        The data should be a dict with the following keys:
-        - title: the title of the bingo sheet
-        - header: the header of the bingo sheet
+    The data should be a dict with the following keys:
+    - title: the title of the bingo sheet
+    - header: the header of the bingo sheet
     - entries: a list of entries to fill the bingo sheet with
 
-        Args:
-            data (dict): dict generated from the json file
-            bingo sheet
-            size (int, optional): Side length of bingo square. Defaults to 4.
+    Args:
+        data (dict): dict for the bingo sheet
+        size (int, optional): Side length of bingo square. Defaults to 4.
 
-        Returns:
-            dict: A dict with the following keys:
-            - title: the title of the bingo sheet
-            - header: the header of the bingo sheet
-            - entries: a 2d list of entries to fill the bingo sheet with
+    Returns:
+        dict: A dict with the following keys:
+        - title: the title of the bingo sheet
+        - header: the header of the bingo sheet
+        - entries: a 2d list of entries to fill the bingo sheet with
     """
     title = data["title"]
     header = data["header"]
@@ -77,6 +76,24 @@ def create_sheets(data, size=4, amount=1):
     return sheets
 
 
+def check_uniqueness(sheets):
+    """Check if the bingo sheets are unique.
+
+    Args:
+        sheets (list): list of dicts with the following keys:
+            - title: the title of the bingo sheet
+            - header: the header of the bingo sheet
+            - entries: a 2d list of entries to fill the bingo sheet with
+
+    Returns:
+        bool: True if all sheets are unique, False otherwise
+    """
+    entries = []
+    for sheet in sheets:
+        entries += [entry for row in sheet["entries"] for entry in row]
+    return len(entries) == len(set(entries))
+
+
 def create_pdf(sheets, filename="bingo.pdf"):
     """Create a pdf from the bingo sheets.
 
@@ -108,3 +125,45 @@ def create_pdf(sheets, filename="bingo.pdf"):
             pdf.add_page()
 
     pdf.output(filename)
+
+
+def main():
+    # load json file
+    data = load_json("bingo.json")
+    max_tries = 10  # max tries to generate unique sheets.
+
+    while True:
+        # get size and amount from user
+        try:
+            size = int(input("Enter the size of the bingo sheet (default 4): ") or 4)
+            amount = int(
+                input("Enter the number of bingo sheets to create (default 1): ") or 1
+            )
+            break
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+    # create bingo sheets until the generated sheets are unique
+    for _ in range(max_tries):
+        sheets = create_sheets(data, size, amount)
+        if check_uniqueness(sheets):
+            break
+        else:
+            print("Bingo sheets are not unique. Generating again...")
+
+        if _ == max_tries - 1:
+            print(
+                "Failed to generate",
+                amount,
+                "unique bingo sheets after",
+                max_tries,
+                "attempts. Saving last attempt.",
+            )
+            return
+
+    # create pdf
+    create_pdf(sheets, filename="bingo.pdf")
+
+
+if __name__ == "__main__":
+    main()
