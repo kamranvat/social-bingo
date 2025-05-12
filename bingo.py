@@ -86,11 +86,13 @@ def check_uniqueness(sheets):
     """
     if len(sheets) < 2:
         return True
-    
+
     statements = []
     for sheet in sheets:
         # flatten the statements, keeping the order
-        flat_statements = [statement for row in sheet["statements"] for statement in row]
+        flat_statements = [
+            statement for row in sheet["statements"] for statement in row
+        ]
         statements.append(flat_statements)
     # check if all statements are unique
     for i in range(len(statements)):
@@ -98,7 +100,7 @@ def check_uniqueness(sheets):
             if statements[i] == statements[j]:
                 print(f"Duplicate sheets found: {i} and {j}")
                 return False
-            
+
     return True
 
 
@@ -140,13 +142,23 @@ def create_pdf(sheets, filename="bingo.pdf"):
     # loop through sheets
     for i, sheet in enumerate(sheets):
         pdf.set_font(font, "B", title_font_size)
-        pdf.cell(200, 10, text=sheet["title"], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+        pdf.cell(
+            200, 10, text=sheet["title"], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C"
+        )
         if i == 0:
             title_height = pdf.get_y()
 
         # add header
         pdf.set_font(font, "I", header_font_size)
-        pdf.multi_cell(200, 10, text=sheet["header"], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", max_line_height=pdf.font_size)
+        pdf.multi_cell(
+            200,
+            10,
+            text=sheet["header"],
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+            align="C",
+            max_line_height=pdf.font_size,
+        )
         if i == 0:
             header_height = pdf.get_y()
 
@@ -162,23 +174,20 @@ def create_pdf(sheets, filename="bingo.pdf"):
                     border=1,
                     align="C",
                     max_line_height=pdf.font_size,
-                    #new_x=XPos.RIGHT,
+                    # new_x=XPos.RIGHT,
                     new_y=YPos.TOP,
                 )
 
             pdf.ln()
 
         if i == 0:
-            grid_height = pdf.get_y() 
+            grid_height = pdf.get_y()
             print(grid_height)
 
+        # print(title_height, header_height)
+        # pdf.ln(title_height + header_height)
 
- 
-        #print(title_height, header_height)
-        #pdf.ln(title_height + header_height)
-
-        pdf.set_y(title_height + header_height
-                   + grid_height + 5)
+        pdf.set_y(title_height + header_height + grid_height + 5)
 
         # add page break
         if (i + 1) % 2 == 0:
